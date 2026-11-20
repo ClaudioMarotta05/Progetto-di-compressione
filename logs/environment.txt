@@ -1,0 +1,12 @@
+=== Data ===
+2026-11-20T10:44:18Z
+=== Python ===
+Python 3.12.3
+=== Platform ===
+Linux-7.0.0-42-generic-x86_64-with-glibc2.39
+=== Pip ===
+pip 26.3 from /home/claudio/Documenti/compressione dati/progetto compressione/.venv/lib/python3.12/site-packages/pip (python 3.12)
+=== Git commit ===
+cdd75738bf88234c94fcb2bab863a35bbc1499ee
+=== Git branch ===
+main

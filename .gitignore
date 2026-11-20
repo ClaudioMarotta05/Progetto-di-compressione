@@ -1,0 +1,29 @@
+# Ambiente virtuale
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Dati grezzi e corpora (troppo grandi, ricreabili dagli hash)
+data/raw/
+data/dev/*.txt
+data/holdout/*.txt
+
+# Output sperimentali (rigenerabili da config + seed)
+experiments/outputs/
+
+# Log temporanei (ma non i file di ambiente e hash)
+logs/*.log
+logs/tmp/
+
+# Eccezioni: manifest, hash, ambiente e commit di riferimento SI versionano
+!data/dev/manifest.json
+!data/holdout/manifest.json
+!logs/environment.txt
+!logs/commit_fase0.txt
+!logs/data_hashes.sha256
