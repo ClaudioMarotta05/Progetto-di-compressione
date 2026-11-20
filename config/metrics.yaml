@@ -1,0 +1,67 @@
+# config/metrics.yaml — Protocollo v1.0 — congelato in Fase 1
+
+fidelity:
+  bleu:
+    implementation: "sacrebleu"
+    version: "2.4.3"
+    tokenizer: "13a"
+    case_sensitive: true
+    smooth_method: "exp"
+    effective_order: true
+  rouge_l:
+    implementation: "rouge-score"
+    version: "0.1.2"
+    metric: "rougeL"
+    use_stemmer: false
+  precision_at_k:
+    definition: >
+      Dati i gap di un documento ordinati per gap_id, Precision@k è la
+      frazione dei primi k gap in cui il contenuto inferito coincide
+      esattamente (token-level, case-sensitive) con l'oracle del gap.
+    k_values: [1, 3, 5, 10]
+    token_level: true
+    exact_match: true
+
+errors:
+  alignment:
+    method: "deterministic_subsequence"
+  classes:
+    - correct
+    - hallucinated
+    - omitted
+    - wrong_length
+    - overinserted
+  definitions:
+    correct: "token inferito presente nell'oracle del gap, nella stessa posizione relativa"
+    hallucinated: "token inferito non presente nell'oracle del gap"
+    omitted: "token dell'oracle non inferito"
+    wrong_length: "|len(pred) - len(oracle)| > 0 per il gap"
+    overinserted: "token inferiti oltre la lunghezza dell'oracle del gap"
+  rates:
+    accuracy: "token corretti / token oracle totali"
+    hallucination_rate: "token allucinati / token inferiti totali"
+    omission_rate: "token omessi / token oracle totali"
+    length_error: "media di |len(pred) - len(oracle)| / len(oracle) sui gap"
+    overinsertion_rate: "token in eccesso / token oracle totali"
+
+compression:
+  streams:
+    - skeleton
+    - manifest_or_placeholder
+    - corrections
+  algorithms:
+    - deflate
+    - bwt
+    - ppm
+  reported:
+    - ratio_per_stream
+    - ratio_combined
+    - overhead_manifest_or_placeholder
+    - lossless_verified
+
+reconstruction:
+  checks:
+    - identity_lossless
+    - quality_vs_oracle
+    - compression_error_vs_inference_error
+    - oracle_not_in_payload

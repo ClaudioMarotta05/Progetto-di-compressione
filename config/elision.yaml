@@ -1,0 +1,57 @@
+# config/elision.yaml — Protocollo v1.0 — congelato in Fase 1
+# Strategie ammesse: A e B. (C esclusa da questo protocollo.)
+# Ogni modifica a questo file richiede una nuova versione del protocollo.
+
+strategies:
+  A:
+    name: "elisione pura + manifest"
+    description: >
+      Le parole vengono rimosse e sostituite da nulla. Lo scheletro contiene
+      solo il testo rimasto. Un manifest separato registra gap_id, posizione
+      nello scheletro, numero di token rimossi. Il modello di inferenza vede
+      SOLO lo scheletro, non il manifest.
+    placeholder: null
+    manifest: true
+    model_sees_count: false
+    reconstructible: true
+
+  B:
+    name: "elisione con placeholder di conteggio"
+    description: >
+      Ogni gap è sostituito da un placeholder nella forma [N], dove N è il
+      numero di parole rimosse. Il modello vede il conteggio. Il manifest è
+      comunque presente per la ricostruzione e l'audit.
+    placeholder: "[{n}]"
+    manifest: true
+    model_sees_count: true
+    reconstructible: true
+
+ratios:
+  values: [0.10, 0.20, 0.30, 0.40, 0.50]
+
+gap_generation:
+  contiguous: true
+  max_gap_length_words: 8
+  min_gap_length_words: 1
+  allow_overlapping_gaps: false
+  gap_selection: "deterministic_random"
+
+seed:
+  derivation: "sha256"
+  global_seed_ref: "config/base.yaml:reproducibility.global_seed"
+
+manifest:
+  format: "jsonl"
+  fields:
+    - doc_id
+    - gap_id
+    - orig_token_start
+    - skeleton_pos
+    - n_removed
+    - strategy
+    - ratio_target
+    - effective_ratio
+    - seed_doc
+  forbidden_fields:
+    - removed_words
+    - oracle_text

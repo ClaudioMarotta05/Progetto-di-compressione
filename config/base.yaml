@@ -1,0 +1,5 @@
+# config/base.yaml — Fase 0
+# Seed globale di riproducibilità. Riferito da config/elision.yaml:seed.global_seed_ref
+
+reproducibility:
+  global_seed: 42
