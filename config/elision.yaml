@@ -1,26 +1,12 @@
-# config/elision.yaml — Protocollo v1.0 — congelato in Fase 1
-# Strategie ammesse: A e B. (C esclusa da questo protocollo.)
-# Ogni modifica a questo file richiede una nuova versione del protocollo.
-
 strategies:
   A:
     name: "elisione pura + manifest"
-    description: >
-      Le parole vengono rimosse e sostituite da nulla. Lo scheletro contiene
-      solo il testo rimasto. Un manifest separato registra gap_id, posizione
-      nello scheletro, numero di token rimossi. Il modello di inferenza vede
-      SOLO lo scheletro, non il manifest.
     placeholder: null
     manifest: true
     model_sees_count: false
     reconstructible: true
-
   B:
     name: "elisione con placeholder di conteggio"
-    description: >
-      Ogni gap è sostituito da un placeholder nella forma [N], dove N è il
-      numero di parole rimosse. Il modello vede il conteggio. Il manifest è
-      comunque presente per la ricostruzione e l'audit.
     placeholder: "[{n}]"
     manifest: true
     model_sees_count: true
@@ -30,11 +16,74 @@ ratios:
   values: [0.10, 0.20, 0.30, 0.40, 0.50]
 
 gap_generation:
-  contiguous: true
+  contiguous: false
   max_gap_length_words: 8
   min_gap_length_words: 1
   allow_overlapping_gaps: false
-  gap_selection: "deterministic_random"
+  target_rounding: "floor(x + 0.5)"
+
+  word_selection:
+    primary: "content_band"
+
+    structural_cap:
+      computed_per_document: true
+      formula: "|candidates| / W"
+      note: >
+        Ogni condizione ha un tetto strutturale empirico calcolato come
+        |candidati| / W, dove candidati sono le parole che soddisfano il
+        criterio e W è il totale delle parole del documento. Il tetto NON
+        è una costante: varia con la composizione del vocabolario di ogni
+        documento. Non hardcodare valori fissi.
+      reported_in:
+        - "meta.json:candidate_ratio"
+        - "meta.json:target_reachable"
+        - "report: distribuzione per condizione (min/media/max)"
+
+    conditions:
+      - name: "random_stratified"
+        method: "random_stratified"
+        params: {n_blocks: 10}
+        role: "baseline"
+
+      - name: "function_only"
+        method: "stopword_only"
+        params: {stopword_list_ref: "data/external/it_stopwords.txt"}
+        role: "ablation"
+
+      - name: "content_band"
+        method: "frequency_band"
+        params:
+          frequency_list_ref: "data/external/it_frequency_list.txt"
+          band: {min_rank: 500, max_rank: 5000}
+        role: "primary"
+
+      - name: "anchor_preservation"
+        method: "tfidf_anchor"
+        params:
+          idf_ref: "data/external/it_idf.txt"
+          anchor_top_k_per_window: 3
+          window_words: 50
+          min_gap_distance_from_anchor: 1
+        role: "primary"
+
+  algorithm:
+    - "Sia W il numero totale di parole del documento."
+    - "Sia target_words = floor(ratio_target * W + 0.5)."
+    - "Costruisci l'insieme C delle parole eleggibili secondo word_selection.conditions[cond].method."
+    - "Sia removed = 0 e RNG = random.Random(seed_doc)."
+    - "Finché removed < min(target_words, |C|):"
+    - "  Scegli una parola w in C non ancora rimossa."
+    - "  Se contiguous: espandi lo span a parole adiacenti in C fino a max_gap_length_words."
+    - "  Registra il gap."
+    - "Ordina i gap per inizio crescente, assegna gap_id."
+
+  rng_call_order: ["word", "L", "offset"]
+
+  field_definitions:
+    orig_token_start: "indice 0-based del primo token originale rimosso, include non-parole"
+    skeleton_pos: "indice 0-based nella lista token dello scheletro"
+    n_removed: "numero di parole rimosse nel gap"
+    effective_ratio: "parole rimosse totali / W"
 
 seed:
   derivation: "sha256"
@@ -46,12 +95,19 @@ manifest:
     - doc_id
     - gap_id
     - orig_token_start
-    - skeleton_pos
+    - orig_token_end
     - n_removed
     - strategy
     - ratio_target
+    - skeleton_pos
     - effective_ratio
-    - seed_doc
+    - word_selection_condition
   forbidden_fields:
     - removed_words
+    - removed_text
     - oracle_text
+  diagnostic_fields:
+    - elided_content_ratio
+    - elided_function_word_ratio
+    - elided_mean_zipf_rank
+    - context_density_per_gap

@@ -1,8 +1,10 @@
-# config/tokenizer.yaml — Fase 0
-# Definizione congelata di "parola" per il progetto.
-# Una parola è una sequenza massimale di caratteri che soddisfa word_pattern.
-# I token non-parola (punteggiatura, spazi, simboli) non sono mai candidati
-# all'elisione.
-
+name: "regex_v1"
 word_pattern: "[A-Za-zÀ-ÖØ-öø-ÿ0-9_]+"
+tokenization_mode: "finditer"
+case_sensitive: true
+normalization: "none"
 non_word_never_elided: true
+
+placeholder:
+  pattern: "\\[[0-9]+\\]"
+  atomic_non_word: true

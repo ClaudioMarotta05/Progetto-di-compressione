@@ -1,4 +1,4 @@
-# config/metrics.yaml — Protocollo v1.0 — congelato in Fase 1
+# config/metrics.yaml — Protocollo v1.1 — congelato in Fase 1
 
 fidelity:
   bleu:
@@ -8,11 +8,15 @@ fidelity:
     case_sensitive: true
     smooth_method: "exp"
     effective_order: true
+    level: "corpus"
+    aggregation: "sacrebleu corpus-level su tutti i documenti"
   rouge_l:
     implementation: "rouge-score"
     version: "0.1.2"
     metric: "rougeL"
     use_stemmer: false
+    level: "document"
+    aggregation: "media per documento, F1, no stemmer"
   precision_at_k:
     definition: >
       Dati i gap di un documento ordinati per gap_id, Precision@k è la
@@ -21,6 +25,8 @@ fidelity:
     k_values: [1, 3, 5, 10]
     token_level: true
     exact_match: true
+    if_fewer_than_k_gaps: "usa k_eff = min(k, n_gaps)"
+    if_zero_gaps: "null, escluso dall'aggregato"
 
 errors:
   alignment:
@@ -31,6 +37,9 @@ errors:
     - omitted
     - wrong_length
     - overinserted
+  levels:
+    token_level: [correct, hallucinated, omitted]
+    gap_level: [wrong_length, overinserted]
   definitions:
     correct: "token inferito presente nell'oracle del gap, nella stessa posizione relativa"
     hallucinated: "token inferito non presente nell'oracle del gap"
@@ -58,6 +67,10 @@ compression:
     - ratio_combined
     - overhead_manifest_or_placeholder
     - lossless_verified
+  formulas:
+    ratio_per_stream: "compressed_bytes(stream) / raw_bytes(stream)"
+    ratio_combined: "compressed_bytes(skeleton + manifest_or_placeholder + corrections) / raw_bytes(original_text)"
+    overhead_manifest_or_placeholder: "raw_bytes(manifest_or_placeholder) / raw_bytes(skeleton)"
 
 reconstruction:
   checks:
@@ -65,3 +78,17 @@ reconstruction:
     - quality_vs_oracle
     - compression_error_vs_inference_error
     - oracle_not_in_payload
+
+controls:
+  context_density:
+    definition: "anchor words in ±window_words attorno al gap / parole totali nella finestra"
+    window_words: 50
+    anchor_definition: "coerente con elision.yaml:word_selection.method"
+    purpose: >
+      Controllo del confondente: mette in relazione il contesto residuo con
+      l'accuratezza per gap. Non è metrica di qualità.
+  elided_composition:
+    content_ratio: "content words rimosse / parole rimosse"
+    function_word_ratio: "function words rimosse / parole rimosse"
+    mean_zipf_rank: "media del rango di frequenza delle parole rimosse"
+    purpose: "Mostra che le condizioni sperimentali elidono classi di parole diverse."
