@@ -1,0 +1,68 @@
+[
+  {
+    "doc_id": "finewiki_it_large_001",
+    "scale": "large",
+    "n_words": 1000301,
+    "sha256": "49e51499db3f9daea558faeed810299e740e7360f0f114abb54ad6e9e8a6b9ce"
+  },
+  {
+    "doc_id": "finewiki_it_large_005",
+    "scale": "large",
+    "n_words": 1002047,
+    "sha256": "3f8e55a96b915d6af198f59a956b943511e7b2d4c95c2a3f35e528dbfdb03a8a"
+  },
+  {
+    "doc_id": "finewiki_it_large_006",
+    "scale": "large",
+    "n_words": 1000290,
+    "sha256": "49a7967be6cafe435b2ee7e3efc4769589ab82800a69ec19e67707d201702504"
+  },
+  {
+    "doc_id": "finewiki_it_large_007",
+    "scale": "large",
+    "n_words": 1001380,
+    "sha256": "72830b5cea3c5db6e0407ac284e8c81fea261b09dfecdcfe8eeed2fb72fe7f5b"
+  },
+  {
+    "doc_id": "finewiki_it_large_009",
+    "scale": "large",
+    "n_words": 1000035,
+    "sha256": "a682f608aeb994f9a23e08483f483ad4f72385f0ae40d41defc1c81e2a729971"
+  },
+  {
+    "doc_id": "finewiki_it_large_010",
+    "scale": "large",
+    "n_words": 1000096,
+    "sha256": "e27d8cfb12b239ff124b6795902e4d4cf566b2abfaaca308cc130153a268ff09"
+  },
+  {
+    "doc_id": "finewiki_it_medium_002",
+    "scale": "medium",
+    "n_words": 100147,
+    "sha256": "6cf59a1b18b34b2ffa5c689c7ed4a97da83fb21eb8e0cb2d378652b2b8374196"
+  },
+  {
+    "doc_id": "finewiki_it_medium_003",
+    "scale": "medium",
+    "n_words": 100200,
+    "sha256": "221716f8ea5b7088b951e4fcfb77030f2b8ab81358c845baaf2b9f99fe251999"
+  },
+  {
+    "doc_id": "finewiki_it_medium_008",
+    "scale": "medium",
+    "n_words": 100033,
+    "sha256": "487b25c30adccf025e05aa3723426ef0573d804c8539f497059219a4c44e7bcd"
+  },
+  {
+    "doc_id": "finewiki_it_small_008",
+    "scale": "small",
+    "n_words": 10079,
+    "sha256": "d5badbd56da8626f4c43e6ba37521663dc7d882bdaaef6762405f45090afd7a2"
+  },
+  {
+    "doc_id": "finewiki_it_small_010",
+    "scale": "small",
+    "n_words": 10499,
+    "sha256": "f5bb30151c984b8448236e6df6778dbe92936c7addc77a10b5e7f7d809a7a617"
+  }
+]

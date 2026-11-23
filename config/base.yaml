@@ -1,5 +1,27 @@
-# config/base.yaml — Fase 0
-# Seed globale di riproducibilità. Riferito da config/elision.yaml:seed.global_seed_ref
+project:
+  name: "gap-compression"
+  protocol_version: "1.1"
+  phase0_commit_ref: "logs/commit_fase0.txt"
 
 reproducibility:
   global_seed: 42
+
+paths:
+  data_dev: "data/dev"
+  data_holdout: "data/holdout"
+  data_external: "data/external"
+  logs: "logs"
+  reports: "reports"
+  outputs: "experiments/outputs"
+
+scales:
+  small:  {target_words: 10_000,   tolerance: 0.05}
+  medium: {target_words: 100_000,  tolerance: 0.05}
+  large:  {target_words: 1_000_000, tolerance: 0.05}
+
+splits:
+  method: "document_level_hash"
+  hash_algorithm: "sha256"
+  holdout_fraction: 0.20
+  rule: "int(sha256(f'split:{doc_id}').hexdigest(), 16) % 100 < 20"
+  n_docs_per_scale: 10
