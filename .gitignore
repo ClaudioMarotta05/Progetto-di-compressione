@@ -27,3 +27,5 @@ logs/tmp/
 !logs/environment.txt
 !logs/commit_fase0.txt
 !logs/data_hashes.sha256
+.DS_Store
+.DS_Store
