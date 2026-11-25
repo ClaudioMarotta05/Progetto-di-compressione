@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Protocol](https://img.shields.io/badge/Protocollo-v1.1%20Frozen-blueviolet)
 ![Tests](https://img.shields.io/badge/Pytest-19%2F19%20Passed-brightgreen)
-![Lossless](https://img.shields.io/badge/Lossless%20Verified-120%2F120%20OK-success)
+![Lossless](https://img.shields.io/badge/Lossless%20Verified-240%2F240%20OK-success)
 
 Pipeline sperimentale e riproducibile per la **compressione neurale progressiva di testo italiano con residui lossless**, sviluppata per il corso di *Compressione Dati* (Università degli Studi di Salerno).
 
@@ -41,9 +41,9 @@ Ogni strategia viene testata su **5 rapporti di elisione** (`10%`, `20%`, `30%`,
 | **Fase 2** | Motore di elisione deterministico (`elision/`) | ✅ Completata | Tokenizer reversibile, segnaposto `[N]` atomici, 5 test unitari |
 | **Fase 3** | Preparazione corpora e split (`data/dev/`) con verifica hash | ✅ Completata | 30 documenti sincronizzati via hash tra macOS e Linux |
 | **Fase 4** | Generazione scheletri, manifest e oracle (`run_phase2.py`) | ✅ Completata | 160 file generati per `finewiki_it_small_001` (40 combo × 4 file) |
-| **Fase 5** | Inferenza LLM deterministica (`inference/`, `run_phase5.py`) | ⏳ Parziale | `model_1` (`0.5B`): **40/40 OK** — `model_2` (`1.5B`): in coda |
-| **Fase 6** | Residui lossless, codec `deflate`/`bwt`/`ppm`, container `gapcomp/1` | ✅ Completata | **120/120 verifiche lossless OK** su `model_1`, 19/19 test pytest |
-| **Fase 7** | Metriche di qualità (`BLEU`, `ROUGE-L`, `P@k`), errori e controlli | 🛠️ Prossima | Specifiche congelate in `config/metrics.yaml` |
+| **Fase 5** | Inferenza LLM deterministica (`inference/`, `run_phase5.py`) | ✅ Completata | `model_1` (`0.5B`): **40/40 OK** — `model_2` (`1.5B`): **40/40 OK** |
+| **Fase 6** | Residui lossless, codec `deflate`/`bwt`/`ppm`, container `gapcomp/1` | ✅ Completata | **240/240 verifiche lossless OK** (120+120), 19/19 test pytest |
+| **Fase 7** | Metriche di qualità (`BLEU`, `ROUGE-L`, `P@k`), errori, controlli e grafici | 🛠️ Prossima | Specifiche congelate in `config/metrics.yaml` |
 
 ---
 
@@ -88,8 +88,8 @@ Ogni strategia viene testata su **5 rapporti di elisione** (`10%`, `20%`, `30%`,
 ### macOS (Apple Silicon)
 
 ```bash
-git clone <URL_DEL_REPO>
-cd "Progressive Neural Compression with Loseless Residuals"
+git clone [https://github.com/ClaudioMarotta05/Progressive-Neural-Compression-with-Loseless-Residuals.git](https://github.com/ClaudioMarotta05/Progressive-Neural-Compression-with-Loseless-Residuals.git)
+cd Progressive-Neural-Compression-with-Loseless-Residuals
 
 python3.12 -m venv ~/venvs/gap-compression
 source ~/venvs/gap-compression/bin/activate
@@ -100,8 +100,8 @@ pip install -r requirements.txt
 ### Linux (CPU o GPU NVIDIA CUDA)
 
 ```bash
-git clone <URL_DEL_REPO>
-cd "Progressive Neural Compression with Loseless Residuals"
+git clone [https://github.com/ClaudioMarotta05/Progressive-Neural-Compression-with-Loseless-Residuals.git](https://github.com/ClaudioMarotta05/Progressive-Neural-Compression-with-Loseless-Residuals.git)
+cd Progressive-Neural-Compression-with-Loseless-Residuals
 
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -153,35 +153,29 @@ Lo script è **riprendibile**: se interrotto con `Ctrl+C`, al riavvio salta auto
 ### 4. Fase 6 — Compressione lossless e verifica bit-a-bit
 
 ```bash
-python experiments/run_phase6.py --model model_1
-```
-
-Per elaborare tutti i modelli presenti in `experiments/outputs/phase5/`:
-
-```bash
 python experiments/run_phase6.py --model all
 ```
 
-Produce per ciascun modello:
-- `experiments/outputs/phase6/<model_id>/containers/*.gapcomp` (container binari)
-- `experiments/outputs/phase6/<model_id>/reports/*.json` (report dettagliati per combinazione)
+Produce per ciascun modello (`model_1` e `model_2`):
+- `experiments/outputs/phase6/<model_id>/containers/*.gapcomp` (120 container binari per modello)
+- `experiments/outputs/phase6/<model_id>/reports/*.json` (40 report dettagliati per combinazione)
 - `experiments/outputs/phase6/<model_id>/summary.csv` (tabella aggregata per l'analisi)
 
 ---
 
 ## Scelte tecniche e ottimizzazioni (Fase 5)
 
-Durante il collaudo locale su **MacBook Air M4** sono emersi e stati risolti alcuni aspetti chiave documentati nel codice:
+Durante il collaudo e l'esecuzione completa su **MacBook Air M4** sono emersi e stati risolti alcuni aspetti chiave documentati nel codice:
 
-- **CPU `float32` preferita a MPS su Apple Silicon:** il backend `mps` in `float16` ha mostrato instabilità numerica e decadimento dell'output; `cpu` in `float32` garantisce stabilità completa (~26,1 tok/s base).
-- **Accelerazione lossless dell'inferenza (`prompt_lookup_num_tokens=10`):** sfruttando il fatto che lo scheletro va in gran parte ricopiato fedelmente, il prompt-lookup decoding di Hugging Face mantiene l'esatto output del greedy decoding (`do_sample=False`, `num_beams=1`) portando il throughput fino a **~110,9 tok/s** (~3,5 ore totali per 40 combinazioni con `model_1`).
+- **CPU `float32` preferita a MPS su Apple Silicon:** il backend `mps` in `float16` ha mostrato instabilità numerica e decadimento dell'output; `cpu` in `float32` garantisce stabilità completa.
+- **Accelerazione lossless dell'inferenza (`prompt_lookup_num_tokens=10`):** sfruttando il fatto che lo scheletro va in gran parte ricopiato fedelmente, il prompt-lookup decoding di Hugging Face mantiene l'esatto output del greedy decoding (`do_sample=False`, `num_beams=1`), rendendo gestibili le esecuzioni locali sia per `model_1` (~3,5 ore totali) sia per `model_2` (~12–13 ore totali).
 - **Chunking deterministico:** lo scheletro viene elaborato in chunk da ~200 parole per evitare saturazione di contesto e troncamenti, poi ricomposto nell'ordine originale.
-- **Prompt zero-shot puliti:** i test con prompt 1-shot su modelli da `0.5B` causavano copia dell'esempio o deriva testuale; i template zero-shot in `inference/prompts.py` preservano la fedeltà allo scheletro.
+- **Prompt zero-shot puliti:** i test con prompt 1-shot su modelli compatti causavano copia dell'esempio o deriva testuale; i template zero-shot in `inference/prompts.py` preservano la fedeltà allo scheletro.
 - **Determinismo cross-hardware:** la ricostruzione lossless richiede che encoder e decoder ottengano la medesima predizione $\hat{Y}$. Differenze di backend o precisione (es. `cpu/float32` su ARM64 vs `cuda/float16` su x86_64) possono produrre divergenze sui logit in virgola mobile; pertanto ogni modello completa il ciclo compressione → decompressione sullo stesso ambiente hardware.
 
 ---
 
-## Risultati attuali — Fase 6 (`model_1`: `Qwen2.5-0.5B-Instruct`)
+## Risultati — Fase 6 (`model_1` `0.5B` vs `model_2` `1.5B`)
 
 Documento di riferimento: **`finewiki_it_small_001`** (`117.304` byte grezzi).
 
@@ -193,28 +187,31 @@ Documento di riferimento: **`finewiki_it_small_001`** (`117.304` byte grezzi).
 | `bwt` (`bz2`, level 9) | 26.426 B | `0.225` | ✅ OK |
 | `ppm` (`pyppmd`) | 23.722 B | `0.202` | ✅ OK |
 
-### Risultati medi della pipeline neurale + residui (`model_1`, 40 combinazioni)
+### Confronto diretto della pipeline neurale + residui (medie su 40 combinazioni per modello)
 
-| Strategia | Codec | Exact Hit Rate | `ratio_combined` | `vs_baseline` | Overhead Manifest (`raw_man / raw_skel`) | Lossless (120/120) |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: |
-| **A** | `ppm` | 0.33% | **0.3488** | `1.725x` | 596.49% | ✅ OK |
-| **A** | `bwt` | 0.33% | 0.3973 | `1.764x` | 596.49% | ✅ OK |
-| **A** | `deflate` | 0.33% | 0.4862 | `1.888x` | 596.49% | ✅ OK |
-| **B** | `ppm` | 0.41% | **0.3634** | `1.797x` | 560.04% | ✅ OK |
-| **B** | `bwt` | 0.41% | 0.4113 | `1.826x` | 560.04% | ✅ OK |
-| **B** | `deflate` | 0.41% | 0.5061 | `1.966x` | 560.04% | ✅ OK |
+| Strategia | Codec | Hit% `0.5B` | Hit% `1.5B` | `ratio_combined` `0.5B` | `ratio_combined` `1.5B` | `vs_baseline` `1.5B` | Overhead Manifest | Lossless (240/240) |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **A** | `ppm` | 0.33% | **3.31%** | 0.3488 | **0.3487** | `1.724x` | 596.49% | ✅ OK |
+| **A** | `bwt` | 0.33% | **3.31%** | 0.3973 | **0.3970** | `1.762x` | 596.49% | ✅ OK |
+| **A** | `deflate` | 0.33% | **3.31%** | 0.4862 | **0.4860** | `1.888x` | 596.49% | ✅ OK |
+| **B** | `ppm` | 0.41% | **3.06%** | 0.3634 | **0.3632** | `1.796x` | 560.04% | ✅ OK |
+| **B** | `bwt` | 0.41% | **3.06%** | 0.4113 | **0.4110** | `1.824x` | 560.04% | ✅ OK |
+| **B** | `deflate` | 0.41% | **3.06%** | 0.5061 | **0.5059** | `1.965x` | 560.04% | ✅ OK |
 
-**Prime evidenze sperimentali:**
-- **Integrità 100% garantita:** tutte le **120/120** verifiche lossless (40 combinazioni × 3 codec) ricostruiscono i `117.304` byte originali bit-a-bit senza accesso all'oracle.
-- **Gerarchia dei codec confermata:** `ppm` < `bwt` < `deflate` in tutte le configurazioni.
-- **Perché `vs_baseline` > 1x con `0.5B`:** emergono due fattori netti dai dati: (1) un modello da mezzo miliardo di parametri raggiunge uno `0.33%–0.41%` di exact match sui gap (lasciando molti `[N]` invariati in Strategia B), rendendo lo stream residuo quasi interamente correttivo; (2) la serializzazione JSONL del manifest introduce un overhead strutturale rilevante rispetto allo scheletro. Il confronto con `model_2` (`1.5B`) permetterà di quantificare l'impatto della scala del modello sul trade-off tra qualità predittiva e dimensione dei residui.
+### Evidenze sperimentali principali
+
+- **Integrità lossless 100% garantita:** tutte le **240/240** verifiche (40 combinazioni × 3 codec × 2 modelli) ricostruiscono i `117.304` byte originali bit-a-bit senza accesso all'oracle.
+- **Effetto scala (`0.5B` → `1.5B`):** l'`exact_hit_rate` cresce di **10×** in Strategia A (`0.33%` → `3.31%`) e di **7,5×** in Strategia B (`0.41%` → `3.06%`).
+- **Inversione Strategia A vs B:** con `1.5B`, la Strategia A (testo continuo privo di `[N]`) supera la Strategia B sia per exact hit (`3.31%` vs `3.06%`) sia per rapporto di compressione (`0.3487` vs `0.3632` con `ppm`), mostrando che i segnaposto espliciti introducono sia attrito generativo sia byte aggiuntivi nello scheletro.
+- **Perché `vs_baseline` > 1x anche con `1.5B`:** emergono tre cause strutturali: (1) l'overhead della serializzazione JSONL del manifest rispetto allo scheletro; (2) il ~96,7% dei gap richiede ancora il residuo `+testo`; (3) gli exact match del modello si concentrano soprattutto su parole funzionali brevi e ad alta frequenza, che compressori statistici come `ppm` e `bwt` codificano già a pochissimi bit.
+- **Gerarchia dei codec confermata:** `ppm` < `bwt` < `deflate` in tutte le 80 combinazioni.
 
 ---
 
-## Prossimi passi
+## Prossimo passo: Fase 7
 
-1. Completare Fase 5 e Fase 6 per **`model_2` (`Qwen/Qwen2.5-1.5B-Instruct`)** per il confronto multi-modello.
-2. Implementare la **Fase 7 (`evaluation/` + `experiments/run_phase7.py`)**:
-   - Metriche di fedeltà (`sacrebleu`, `ROUGE-L`, `Precision@k` per $k \in \{1, 3, 5, 10\}$)
-   - Analisi fine-grained degli errori (`correct`, `hallucinated`, `omitted`, `wrong_length`, `overinserted`)
-   - Controlli `context_density` (±50 parole) ed `elided_composition` (`content_ratio`, `function_word_ratio`, `mean_zipf_rank`)
+- Implementazione di `evaluation/` (`fidelity.py`, `errors.py`, `controls.py`), `experiments/run_phase7.py` e `experiments/plot_phase7.py`:
+  - Metriche di fedeltà (`sacrebleu`, `ROUGE-L`, `Precision@k` per $k \in \{1, 3, 5, 10\}$)
+  - Analisi fine-grained degli errori via LCS (`correct`, `hallucinated`, `omitted`, `wrong_length`, `overinserted`)
+  - Controlli `context_density` (±50 parole) ed `elided_composition` (`content_ratio`, `function_word_ratio`, `mean_zipf_rank`)
+  - Grafici comparativi a 300 DPI per la relazione finale
