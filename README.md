@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Protocol](https://img.shields.io/badge/Protocollo-v1.1%20Frozen-blueviolet)
-![Tests](https://img.shields.io/badge/Pytest-19%2F19%20Passed-brightgreen)
+![Tests](https://img.shields.io/badge/Pytest-23%2F23%20Passed-brightgreen)
 ![Lossless](https://img.shields.io/badge/Lossless%20Verified-240%2F240%20OK-success)
 
 Pipeline sperimentale e riproducibile per la **compressione neurale progressiva di testo italiano con residui lossless**, sviluppata per il corso di *Compressione Dati* (Università degli Studi di Salerno).
@@ -19,7 +19,7 @@ Il sistema implementa uno schema completo **Encoder → Container → Decoder** 
 2. **Inferenza neurale (Fase 5):** un LLM locale riceve esclusivamente lo scheletro (elaborato per chunk con greedy decoding deterministico) e predice le parole mancanti.
 3. **Calcolo dei residui e impacchettamento (Fase 6 — Encoder):** confrontando la predizione del modello con l'oracle si genera lo stream compatto `corrections` (`=` in caso di exact match, `+testo` solo in caso di errore). I tre stream congelati (`skeleton`, `manifest_or_placeholder`, `corrections`) vengono compressi separatamente con `deflate`, `bwt` e `ppm` nel container binario **`gapcomp/1`**.
 4. **Decompressione e verifica lossless (Fase 6 — Decoder):** il decoder apre il container `.gapcomp`, verifica gli `SHA-256` di tutti gli stream, combina scheletro, predizioni del modello e residui (senza accedere all'oracle) e verifica che il testo ricostruito sia identico bit-a-bit all'originale.
-5. **Valutazione e controlli (Fase 7):** calcolo delle metriche di fedeltà (`sacrebleu`, `ROUGE-L`, `Precision@k`), classificazione degli errori (`deterministic_subsequence`) e controlli sperimentali (`context_density`, `elided_composition`).
+5. **Valutazione e controlli (Fase 7):** calcolo delle metriche di fedeltà (`sacrebleu`, `ROUGE-L`, `Precision@k`), classificazione deterministica degli errori via LCS (`deterministic_subsequence`), controlli sperimentali (`context_density`, `elided_composition`) e generazione dei grafici comparativi a 300 DPI.
 
 ### Strategie sperimentali confrontate
 
@@ -42,8 +42,8 @@ Ogni strategia viene testata su **5 rapporti di elisione** (`10%`, `20%`, `30%`,
 | **Fase 3** | Preparazione corpora e split (`data/dev/`) con verifica hash | ✅ Completata | 30 documenti sincronizzati via hash tra macOS e Linux |
 | **Fase 4** | Generazione scheletri, manifest e oracle (`run_phase2.py`) | ✅ Completata | 160 file generati per `finewiki_it_small_001` (40 combo × 4 file) |
 | **Fase 5** | Inferenza LLM deterministica (`inference/`, `run_phase5.py`) | ✅ Completata | `model_1` (`0.5B`): **40/40 OK** — `model_2` (`1.5B`): **40/40 OK** |
-| **Fase 6** | Residui lossless, codec `deflate`/`bwt`/`ppm`, container `gapcomp/1` | ✅ Completata | **240/240 verifiche lossless OK** (120+120), 19/19 test pytest |
-| **Fase 7** | Metriche di qualità (`BLEU`, `ROUGE-L`, `P@k`), errori, controlli e grafici | 🛠️ Prossima | Specifiche congelate in `config/metrics.yaml` |
+| **Fase 6** | Residui lossless, codec `deflate`/`bwt`/`ppm`, container `gapcomp/1` | ✅ Completata | **240/240 verifiche lossless OK** (120+120), 3 test unitari |
+| **Fase 7** | Metriche di fedeltà (`BLEU`, `ROUGE-L`, `P@k`), errori, controlli e grafici | ✅ Completata | `evaluation/`, 4 test unitari (**23/23 pytest**), 4 grafici 300 DPI |
 
 ---
 
@@ -68,18 +68,25 @@ Ogni strategia viene testata su **5 rapporti di elisione** (`10%`, `20%`, `30%`,
 │   ├── codecs.py            # Wrapper deflate (zlib-9), bwt (bz2-9), ppm (pyppmd)
 │   ├── residuals.py         # Codifica/decodifica residui (= / +testo) e ricostruzione A/B
 │   └── container.py         # Formato binario gapcomp/1 + verifiche SHA-256 e anti-oracle
+├── evaluation/              # Fase 7: valutazione fedeltà, errori e controlli di protocollo
+│   ├── fidelity.py          # sacreBLEU, ROUGE-L e Precision@k (k=1,3,5,10)
+│   ├── errors.py            # Allineamento deterministico LCS e tassi di errore
+│   └── controls.py          # context_density (±50 parole) e elided_composition
 ├── experiments/             # Script eseguibili della pipeline
 │   ├── run_phase2.py        # Generazione dei 40 scheletri + manifest + oracle
 │   ├── run_phase5.py        # Esecuzione inferenza per modello (--model, --tags)
-│   └── run_phase6.py        # Compressione 3 stream, container .gapcomp e verifica lossless
-├── tests/                   # Suite di test unitari (pytest)
+│   ├── run_phase6.py        # Compressione 3 stream, container .gapcomp e verifica lossless
+│   ├── run_phase7.py        # Calcolo metriche di qualità, errori e controlli
+│   └── plot_phase7.py       # Generazione dei 4 grafici comparativi a 300 DPI
+├── tests/                   # Suite di test unitari (pytest: 23/23 passed)
 │   ├── test_config_consistency.py
 │   ├── test_fase2.py
-│   └── test_fase6.py
+│   ├── test_fase6.py
+│   └── test_fase7.py
 └── logs/                    # Hash di riferimento dei commit per tracciabilità delle fasi
 ```
 
-> **Nota su Git:** i documenti sorgenti (`data/`) e gli output generati (`experiments/outputs/`) sono esclusi da `.gitignore` per mantenere il repository leggero; la riproducibilità tra macchine diverse è garantita da seed deterministici e hash di controllo.
+> **Nota su Git:** i documenti sorgenti (`data/`) e gli output pesanti (`experiments/outputs/phase5/`, container binari `.gapcomp`) sono esclusi da `.gitignore` per mantenere il repository leggero; le tabelle aggregate (`summary.csv`, `combined_summary.csv`) e i grafici finali (`experiments/outputs/phase7/figures/`) sono tracciati nel repository per ispezione immediata.
 
 ---
 
@@ -95,6 +102,7 @@ python3.12 -m venv ~/venvs/gap-compression
 source ~/venvs/gap-compression/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install matplotlib
 ```
 
 ### Linux (CPU o GPU NVIDIA CUDA)
@@ -107,6 +115,7 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install matplotlib
 ```
 
 ---
@@ -119,7 +128,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
-Output atteso: **`19 passed`** (coerenza configurazioni, determinismo elisione, codec, residui, container `gapcomp/1` e controllo anti-oracle).
+Output atteso: **`23 passed`** (coerenza configurazioni, determinismo elisione, codec, residui, container `gapcomp/1`, controllo anti-oracle, metriche di fedeltà, errori LCS e controlli).
 
 ### 2. Fase 4 — Generazione di scheletri, manifest e oracle
 
@@ -161,6 +170,18 @@ Produce per ciascun modello (`model_1` e `model_2`):
 - `experiments/outputs/phase6/<model_id>/reports/*.json` (40 report dettagliati per combinazione)
 - `experiments/outputs/phase6/<model_id>/summary.csv` (tabella aggregata per l'analisi)
 
+### 5. Fase 7 — Valutazione qualità, controlli e grafici
+
+```bash
+python experiments/run_phase7.py --model all
+python experiments/plot_phase7.py
+```
+
+Produce:
+- `experiments/outputs/phase7/<model_id>/reports/*.json` e `summary.csv`
+- `experiments/outputs/phase7/combined_summary.csv` (tabella unificata `model_1` + `model_2`)
+- `experiments/outputs/phase7/figures/*.png` (4 grafici in italiano a 300 DPI)
+
 ---
 
 ## Scelte tecniche e ottimizzazioni (Fase 5)
@@ -198,20 +219,14 @@ Documento di riferimento: **`finewiki_it_small_001`** (`117.304` byte grezzi).
 | **B** | `bwt` | 0.41% | **3.06%** | 0.4113 | **0.4110** | `1.824x` | 560.04% | ✅ OK |
 | **B** | `deflate` | 0.41% | **3.06%** | 0.5061 | **0.5059** | `1.965x` | 560.04% | ✅ OK |
 
-### Evidenze sperimentali principali
-
-- **Integrità lossless 100% garantita:** tutte le **240/240** verifiche (40 combinazioni × 3 codec × 2 modelli) ricostruiscono i `117.304` byte originali bit-a-bit senza accesso all'oracle.
-- **Effetto scala (`0.5B` → `1.5B`):** l'`exact_hit_rate` cresce di **10×** in Strategia A (`0.33%` → `3.31%`) e di **7,5×** in Strategia B (`0.41%` → `3.06%`).
-- **Inversione Strategia A vs B:** con `1.5B`, la Strategia A (testo continuo privo di `[N]`) supera la Strategia B sia per exact hit (`3.31%` vs `3.06%`) sia per rapporto di compressione (`0.3487` vs `0.3632` con `ppm`), mostrando che i segnaposto espliciti introducono sia attrito generativo sia byte aggiuntivi nello scheletro.
-- **Perché `vs_baseline` > 1x anche con `1.5B`:** emergono tre cause strutturali: (1) l'overhead della serializzazione JSONL del manifest rispetto allo scheletro; (2) il ~96,7% dei gap richiede ancora il residuo `+testo`; (3) gli exact match del modello si concentrano soprattutto su parole funzionali brevi e ad alta frequenza, che compressori statistici come `ppm` e `bwt` codificano già a pochissimi bit.
-- **Gerarchia dei codec confermata:** `ppm` < `bwt` < `deflate` in tutte le 80 combinazioni.
+![Compressione combinata vs Baseline](experiments/outputs/phase7/figures/01_compressione_vs_baseline.png)
 
 ---
 
-## Prossimo passo: Fase 7
+## Risultati — Fase 7 (Fedeltà, Errori e Controlli del Protocollo v1.1)
 
-- Implementazione di `evaluation/` (`fidelity.py`, `errors.py`, `controls.py`), `experiments/run_phase7.py` e `experiments/plot_phase7.py`:
-  - Metriche di fedeltà (`sacrebleu`, `ROUGE-L`, `Precision@k` per $k \in \{1, 3, 5, 10\}$)
-  - Analisi fine-grained degli errori via LCS (`correct`, `hallucinated`, `omitted`, `wrong_length`, `overinserted`)
-  - Controlli `context_density` (±50 parole) ed `elided_composition` (`content_ratio`, `function_word_ratio`, `mean_zipf_rank`)
-  - Grafici comparativi a 300 DPI per la relazione finale
+### Metriche di fedeltà e profilazione errori (medie su 40 combinazioni per modello)
+
+| Modello | `sacreBLEU` aggregato | Strategia | `BLEU` medio | `ROUGE-L` (F1) | Token Acc. (LCS) | Exact Gap% (token) | Allucinazioni | Omissioni | `P@10` | `CtxDensity` |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`model_1` (`0.5B`)** | `24.27` | **A** | 23.19 | 0.5311 | 0.71% | 0.39% | 98.67% | 99.
