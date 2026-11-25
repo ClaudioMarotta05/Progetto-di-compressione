@@ -229,4 +229,33 @@ Documento di riferimento: **`finewiki_it_small_001`** (`117.304` byte grezzi).
 
 | Modello | `sacreBLEU` aggregato | Strategia | `BLEU` medio | `ROUGE-L` (F1) | Token Acc. (LCS) | Exact Gap% (token) | Allucinazioni | Omissioni | `P@10` | `CtxDensity` |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`model_1` (`0.5B`)** | `24.27` | **A** | 23.19 | 0.5311 | 0.71% | 0.39% | 98.67% | 99.
+| **`model_1` (`0.5B`)** | `24.27` | **A** | 23.19 | 0.5311 | 0.71% | 0.39% | 98.67% | 99.29% | 2.0% | 0.0633 |
+| **`model_1` (`0.5B`)** | `24.27` | **B** | 23.27 | 0.4553 | 0.85% | 0.50% | 99.05% | 99.15% | 1.5% | 0.0608 |
+| **`model_2` (`1.5B`)** | **`25.97`** | **A** | 25.83 | 0.5457 | **5.07%** | **3.73%** | 93.87% | **94.93%** | **6.0%** | 0.0633 |
+| **`model_2` (`1.5B`)** | **`25.97`** | **B** | **25.95** | **0.5613** | 4.06% | 3.37% | **92.24%** | 95.94% | 5.0% | 0.0608 |
+
+![Andamento della fedeltà al variare del ratio](experiments/outputs/phase7/figures/02_fedelta_per_ratio.png)
+
+![Profilo degli errori per condizione lessicale](experiments/outputs/phase7/figures/03_errori_per_condizione.png)
+
+### Controlli sperimentali (`elided_composition` e `context_density`)
+
+| Condizione lessicale | `Content%` | `Function%` | `MeanZipfRank` | `CtxDensity` (±50 parole) |
+| :--- | :---: | :---: | :---: | :---: |
+| `function_only` | 0.00% | **100.00%** | 37.8 | 0.0611 |
+| `content_band` (`500–5000`) | **98.40%** | 1.60% | 1999.5 | 0.0617 |
+| `anchor_preservation` | 68.62% | 31.38% | 10274.8 | **0.0651** |
+| `random_stratified` | 70.27% | 29.73% | 16650.7 | 0.0604 |
+
+![Controlli sperimentali del Protocollo v1.1](experiments/outputs/phase7/figures/04_controlli_protocollo.png)
+
+---
+
+## Sintesi delle evidenze sperimentali
+
+- **Integrità lossless 100% garantita:** tutte le **240/240** verifiche (40 combinazioni × 3 codec × 2 modelli) ricostruiscono i `117.304` byte originali bit-a-bit senza alcun accesso all'oracle.
+- **Effetto scala (`0.5B` → `1.5B`):** l'accuratezza sui gap cresce di **7×–10×** (token accuracy `0.71% → 5.07%` e exact hit `0.33% → 3.31%` in Strategia A), con miglioramenti netti anche su `sacreBLEU`, `ROUGE-L` (specie in Strategia B: `0.4553 → 0.5613`) e `Precision@10` (`2.0% → 6.0%`).
+- **Inversione Strategia A vs B:** con `1.5B`, la Strategia A (testo continuo senza segnaposto `[N]`) supera la B per accuratezza sui gap (`5.07%` vs `4.06%`) e per compressione combinata (`0.3487` vs `0.3632` con `ppm`), indicando che i segnaposto espliciti introducono sia attrito generativo sia byte aggiuntivi nello scheletro.
+- **Perché `vs_baseline` > 1x anche con `1.5B`:** emergono tre cause strutturali: (1) l'overhead della serializzazione JSONL del manifest rispetto allo scheletro; (2) il ~95% dei token elisi richiede comunque il residuo `+testo`; (3) come mostra il profilo per condizione, `1.5B` recupera soprattutto parole in `function_only` (~10% di accuratezza), cioè parole brevi ad altissima frequenza (Zipf medio `37.8`) che `ppm` e `bwt` comprimono già quasi a zero bit.
+- **Validità del Protocollo v1.1 confermata dai controlli:** `elided_composition` dimostra che le 4 condizioni campionano classi lessicali nettamente separate (con `anchor_preservation` che mantiene uno Zipf medio molto inferiore a `random_stratified`, `10274.8` vs `16650.7`, preservando le parole rare ad alto IDF), mentre `context_density` (±50 parole) non presenta correlazione monotona significativa con l'accuratezza per gap (`0.5B`: $\rho = 0.006, p = 0.075$; `1.5B`: $\rho = -0.005, p = 0.20$).
+- **Gerarchia dei codec confermata:** `ppm` < `bwt` < `deflate` in tutte le 80 combinazioni.
